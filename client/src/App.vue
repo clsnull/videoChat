@@ -57,7 +57,14 @@
 
             <div style="width: 50%">
                 <h1>远端</h1>
-                <video ref="remoteVideoRef" autoplay playsinline>远端</video>
+                <video
+                    ref="remoteVideoRef"
+                    autoplay
+                    playsinline
+                    style="width: 100%; height: 100%"
+                >
+                    远端
+                </video>
             </div>
         </div>
     </div>
@@ -173,7 +180,50 @@ function doOffer() {
 function deviceChange(deviceId, type) {
     console.log("设备修改", deviceId, type);
 
-    console.log(pc)
+    if (!pc) return;
+
+    const constraints = {
+        audio: audioDeviceId.value
+            ? { deviceId: { exact: audioDeviceId.value } }
+            : false,
+        video: videoDeviceId.value
+            ? {
+                  deviceId: { exact: videoDeviceId.value },
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 },
+              }
+            : false,
+    };
+    navigator.mediaDevices
+        .getUserMedia(constraints)
+        .then((stream) => {
+            console.log("打开了本地流");
+
+            //删除上一个设备
+            const videoSender = pc
+                .getSenders()
+                .find((s) => s.track && s.track.kind == "video");
+            const oldTrack = videoSender.track;
+            oldTrack.stop();
+
+            const newTrack = stream.getVideoTracks()[0];
+            videoSender.replaceTrack(newTrack);
+            //替换轨道
+
+            //关闭旧流
+            localStream.getTracks().map((track) => {
+                if (track.kind == "video") track.stop();
+            });
+
+            localVideoRef.value.srcObject = stream;
+            localStream = stream;
+        })
+        .catch((e) => {
+            console.log(e);
+            alert("error:" + e.name);
+        });
+
+    console.log(pc);
 }
 //发送answer方法
 function doAnswer() {
