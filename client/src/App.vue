@@ -88,7 +88,7 @@ var remoteStream = null; //远端媒体流
 var pc = null;
 
 /* 连接socket.io服务器 */
-var socket = io("http://localhost:3000");
+var socket = io("http://localhost:3100");
 
 //有人创建了房间
 socket.on("new-peer", (res) => {
@@ -140,6 +140,8 @@ function getAllDevices() {
     navigator.mediaDevices.enumerateDevices().then((res) => {
         videoDeviceList.value = res.filter((item) => item.kind == "videoinput");
         audioDeviceList.value = res.filter((item) => item.kind == "audioinput");
+        
+        videoDeviceId.value = videoDeviceList.value[0].deviceId
     });
 }
 
@@ -253,8 +255,25 @@ function createPeerConnection() {
     pc = new RTCPeerConnection(null);
     pc.onicecandidate = handleIceCandidate;
     pc.ontrack = handleRemoteStreamAdd;
-
+    pc.onconnectionstatechange = handleConnectionstatechange
+    pc.onnegotiationneeded = handleNegotiationNeeded
     localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+}
+function handleConnectionstatechange(event){
+    if(pc.connectionState == 'new') console.log('连接状态', pc.connectionState, '刚创建，尚未建立连接')
+    if(pc.connectionState == 'connecting') console.log('连接状态', pc.connectionState, 'ICE 协商中，正在尝试连接')
+    if(pc.connectionState == 'connected') console.log('连接状态', pc.connectionState, 'P2P 连接成功，可以通信')
+    if(pc.connectionState == 'disconnected') console.log('连接状态', pc.connectionState, '网络中断，但可能恢复')
+    if(pc.connectionState == 'failed') console.log('连接状态', pc.connectionState, '连接失败，需重新协商')
+    if(pc.connectionState == 'closed') console.log('连接状态', pc.connectionState, '连接已关闭')
+}
+
+function handleNegotiationNeeded(event){
+    if(pc.connectionState == 'connected'){
+        console.log('已连接 重新协商', event)
+    }else{
+        console.log('未连接 重新协商', event)
+    }
 }
 
 //ice候选项方法

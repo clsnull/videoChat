@@ -113,6 +113,6 @@ io.on('connection', (socket) => {
     })
 })
 
-httpServer.listen(3000, function () {
-    console.log('服务器启动成功了:http://localhost:3000')
+httpServer.listen(3100, function () {
+    console.log('服务器启动成功了:http://localhost:3100')
 });
