@@ -88,7 +88,7 @@ var remoteStream = null; //远端媒体流
 var pc = null;
 
 /* 连接socket.io服务器 */
-var socket = io("http://localhost:3100");
+var socket = io("http://localhost:3200");
 
 //有人创建了房间
 socket.on("new-peer", (res) => {
@@ -136,15 +136,33 @@ socket.on("peer-candidate", (res) => {
     });
 });
 
-function getAllDevices() {
+async function getAllDevices() {
+
+    await getPermission();
+
     navigator.mediaDevices.enumerateDevices().then((res) => {
         videoDeviceList.value = res.filter((item) => item.kind == "videoinput");
         audioDeviceList.value = res.filter((item) => item.kind == "audioinput");
-        
-        videoDeviceId.value = videoDeviceList.value[0].deviceId
+
+        videoDeviceId.value = videoDeviceList.value[0].deviceId;
     });
 }
 
+async function getPermission() {
+    try {
+        const constraints = {
+            audio: true, // 请求音频
+            video: true
+        };
+        let stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+        stream.getTracks().map((item) => {
+            item.stop();
+        });
+    } catch (e) {
+        console.error("e", e);
+    }
+}
 //加入房间回调方法
 function handleRemoteNewPeer(res) {
     remoteUserId = res.uid;
@@ -159,6 +177,7 @@ function doOffer() {
         console.log("doOffer方法进入offer,pc为:", pc);
         pc.createOffer()
             .then((offer) => {
+                console.log('offer', offer)
                 pc.setLocalDescription(offer)
                     .then(function () {
                         var jsonMsg = {
@@ -255,24 +274,30 @@ function createPeerConnection() {
     pc = new RTCPeerConnection(null);
     pc.onicecandidate = handleIceCandidate;
     pc.ontrack = handleRemoteStreamAdd;
-    pc.onconnectionstatechange = handleConnectionstatechange
-    pc.onnegotiationneeded = handleNegotiationNeeded
+    pc.onconnectionstatechange = handleConnectionstatechange;
+    pc.onnegotiationneeded = handleNegotiationNeeded;
     localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
 }
-function handleConnectionstatechange(event){
-    if(pc.connectionState == 'new') console.log('连接状态', pc.connectionState, '刚创建，尚未建立连接')
-    if(pc.connectionState == 'connecting') console.log('连接状态', pc.connectionState, 'ICE 协商中，正在尝试连接')
-    if(pc.connectionState == 'connected') console.log('连接状态', pc.connectionState, 'P2P 连接成功，可以通信')
-    if(pc.connectionState == 'disconnected') console.log('连接状态', pc.connectionState, '网络中断，但可能恢复')
-    if(pc.connectionState == 'failed') console.log('连接状态', pc.connectionState, '连接失败，需重新协商')
-    if(pc.connectionState == 'closed') console.log('连接状态', pc.connectionState, '连接已关闭')
+function handleConnectionstatechange(event) {
+    if (pc.connectionState == "new")
+        console.log("连接状态", pc.connectionState, "刚创建，尚未建立连接");
+    if (pc.connectionState == "connecting")
+        console.log("连接状态", pc.connectionState, "ICE 协商中，正在尝试连接");
+    if (pc.connectionState == "connected")
+        console.log("连接状态", pc.connectionState, "P2P 连接成功，可以通信");
+    if (pc.connectionState == "disconnected")
+        console.log("连接状态", pc.connectionState, "网络中断，但可能恢复");
+    if (pc.connectionState == "failed")
+        console.log("连接状态", pc.connectionState, "连接失败，需重新协商");
+    if (pc.connectionState == "closed")
+        console.log("连接状态", pc.connectionState, "连接已关闭");
 }
 
-function handleNegotiationNeeded(event){
-    if(pc.connectionState == 'connected'){
-        console.log('已连接 重新协商', event)
-    }else{
-        console.log('未连接 重新协商', event)
+function handleNegotiationNeeded(event) {
+    if (pc.connectionState == "connected") {
+        console.log("已连接 重新协商", event);
+    } else {
+        console.log("未连接 重新协商", event);
     }
 }
 
